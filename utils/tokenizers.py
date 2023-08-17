@@ -122,14 +122,13 @@ class Tokenizer(object):
 
 class MixTokenizer(object):
     def __init__(self, args):
-        # E:\project\Radiology-Report-Generation\
-        self.ann_path = {'iu_xray': "data/iu_xray/annotation.json",
-                         'mimic_cxr': "data/mimic_cxr/annotation.json"}
+        self.ann_path = {'iu_xray': "../../MRG/data/iu_xray/annotation.json",
+                         'mimic_cxr': "../../MRG/data/mimic_cxr/annotation.json"}
         self.threshold = {'iu_xray': 3,
                           'mimic_cxr': 10}
         self.dataset_name = args['dataset_name']
         self.ann = {'iu_xray': json.loads(open(self.ann_path['iu_xray'], 'r').read()),
-                    'mimic_cxr': json.loads(open(self.ann_path['iu_xray'], 'r').read())}
+                    'mimic_cxr': json.loads(open(self.ann_path['mimic_cxr'], 'r').read())}
         self.token2idx, self.idx2token = self.create_vocabulary()
 
     def create_vocabulary(self):

@@ -6,10 +6,11 @@ import numpy as np
 import torch
 import pandas as pd
 from numpy import inf
+from utils.monitor import Monitor
 
 
 class BaseTrainer(object):
-    def __init__(self, model, criterion, metric_ftns, optimizer, args):
+    def __init__(self, model, criterion, metric_ftns, optimizer, args, monitor=True):
         self.args = args
 
         # setup GPU device if available, move model into configured device
@@ -43,6 +44,10 @@ class BaseTrainer(object):
 
         self.best_recorder = {'val': {self.mnt_metric: self.mnt_best},
                               'test': {self.mnt_metric_test: self.mnt_best}}
+        
+        # monitor
+        if monitor:
+            self.monitor = Monitor(args)
 
     @abstractmethod
     def _train_epoch(self, epoch):
@@ -190,7 +195,6 @@ class Trainer(BaseTrainer):
                 images, reports_ids, reports_masks = images.cuda(), reports_ids.cuda(), reports_masks.cuda()
                 output = self.model(images, mode='sample')
                 reports = self.model.tokenizer.decode_batch(output.cpu().numpy())
-                print(reports)
                 ground_truths = self.model.tokenizer.decode_batch(reports_ids[:, 1:].cpu().numpy())
                 val_res.extend(reports)
                 val_gts.extend(ground_truths)

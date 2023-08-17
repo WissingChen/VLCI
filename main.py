@@ -42,7 +42,7 @@ def main():
     # load hyper-param
     # -------------------------------
     parse = argparse.ArgumentParser()
-    parse.add_argument('--c', type=str, default='config/iu_xray/vlci.json',
+    parse.add_argument('--c', type=str, default='config/mimic_cxr/vlci.json',
                        help='json file of config')
     json_path = parse.parse_args()
     args = load_json_args(json_path.c)
@@ -59,6 +59,7 @@ def main():
     # create tokenizer
     # -------------------------------
     tokenizer = tokenizers_fn[args['tokenizer']](args)
+    print('count of tokens', len(tokenizer.token2idx))
     # -------------------------------
     # create data loader
     # -------------------------------
@@ -88,9 +89,16 @@ def main():
              "lr_scheduler": lr_scheduler, "train_dataloader": train_dataloader, "val_dataloader": val_dataloader,
              "test_dataloader": test_dataloader}
 
-    trainer = Trainer(**kwarg)
+    if args["task"] == 'finetune':
+        trainer = FTrainer(**kwarg)
+        trainer.train()
+    elif args["task"] == 'pretrain':
+        trainer = PTrainer(**kwarg)
+        trainer.train()
+    else:
+        trainer = Trainer(**kwarg)
+        trainer.inference()
 
-    trainer.inference()
 
 
 if __name__ == '__main__':

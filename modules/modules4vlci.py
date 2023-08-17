@@ -259,8 +259,8 @@ class LDM(nn.Module):
     def __init__(self, embed_dim):
         super(LDM, self).__init__()
         self.embed_dim = embed_dim
-        self.fuse_v = CrossLayer(embed_dim, 8, embed_dim, .1)
-        self.fuse_t = CrossLayer(embed_dim, 8, embed_dim, .1)
+        self.fuse_v = CrossLayer(embed_dim, 8, 4*embed_dim, .1)
+        self.fuse_t = CrossLayer(embed_dim, 8, 4*embed_dim, .1)
         self.norm = LayerNorm(embed_dim)
         self.intervene = FDIntervention(embed_dim)
 

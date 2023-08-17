@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 from torchvision.models import resnet101
-from modules.coatnet import Transformer as CoAtNetTrans, Rearrange
-from modules.modules4transformer import PositionalEncoding, Embeddings, LayerNorm
+from modules.modules4transformer import PositionalEncoding, Embeddings, LayerNorm, EncoderLayer, DecoderLayer, PositionwiseFeedForward, SublayerConnection, MultiHeadedAttention
 from modules.pos_embed import get_2d_sincos_pos_embed
 from utils import tensor_utils
 
@@ -101,20 +100,111 @@ class TextEmbed(nn.Module):
         return x
 
 
-class DownSamplingTrans(CoAtNetTrans):
-    def __init__(self, **kwargs):
-        super(DownSamplingTrans, self).__init__(**kwargs)
-        self.vec2img = Rearrange('b (ih iw) c -> b c ih iw', ih=self.ih * 2, iw=self.iw * 2)
-        self.img2vec = Rearrange('b c ih iw -> b (ih iw) c', ih=self.ih, iw=self.iw)
+class MultiwayEncoderLayer(EncoderLayer):
+    """
+    weight-shared attention
+    """
+    def __init__(self, embed_dim, num_heads, ff_dim, dropout):
+        super(MultiwayEncoderLayer, self).__init__(embed_dim, num_heads, ff_dim, dropout)
+        self.feed_forward_t = PositionwiseFeedForward(embed_dim, ff_dim, dropout)
+        self.sublayer_ff_t = SublayerConnection(embed_dim, dropout)
 
-    def forward(self, x):
-        x = self.vec2img(x)
-        if self.downsample:
-            x = self.proj(self.pool1(x)) + self.attn(self.pool2(x))
+    def forward(self, x, mask=None, hv_length=None, mode='m'):
+        x = self.sublayer_attn(x, lambda x: self.attn(x, x, x, mask))
+
+        if mode == 'v':
+            x = self.sublayer_ff(x, self.feed_forward)
+        elif mode == 't':
+            x = self.sublayer_ff_t(x, self.feed_forward_t)
         else:
-            x = x + self.attn(x)
-        x = x + self.ff(x)
-        return self.img2vec(x)
+            if hv_length is None:
+                raise ValueError("hv_length is None")
+            x_v = x[:, :hv_length]
+            x_l = x[:, hv_length:]
+            x_v = self.sublayer_ff(x_v, self.feed_forward)
+            x_l = self.sublayer_ff_t(torch.cat([x_v[:, :1], x_l], dim=1), self.feed_forward_t)
+            x = torch.cat([x_v, x_l[:, 1:]], dim=1)
+        return x
+
+
+class MultiwayEncoder(nn.Module):
+    def __init__(self, embed_dim, num_layer, num_heads, ff_dim, dropout):
+        super(MultiwayEncoder, self).__init__()
+        self.layers = nn.ModuleList([MultiwayEncoderLayer(embed_dim, num_heads, ff_dim, dropout)
+                                     for _ in range(num_layer)])
+        self.norm = LayerNorm(embed_dim)
+
+    def forward(self, h, mask=None, hv_length=None, mode='m'):
+        for layer in self.layers:
+            h = layer(h, mask, hv_length, mode)
+        h = self.norm(h)
+        return h
+
+
+class MultimodalDecoderLayer(DecoderLayer):
+    def __init__(self, embed_dim, num_heads, ff_dim, dropout):
+        super(MultimodalDecoderLayer, self).__init__(embed_dim, num_heads, ff_dim, dropout)
+        self.cross_attn_v = MultiHeadedAttention(num_heads, embed_dim, dropout)
+        self.feed_forward_v = PositionwiseFeedForward(embed_dim, ff_dim, dropout)
+
+        self.sublayer_cross_v = SublayerConnection(embed_dim, dropout)
+        self.sublayer_ff_v = SublayerConnection(embed_dim, dropout)
+
+    def forward(self, x, h=None, self_mask=None, cross_mask=None, mode='plm'):
+        x = self.sublayer_self(x, lambda x: self.self_attn(x, x, x, self_mask))
+
+        if mode == 'plm':
+            if h is not None:
+                x = self.sublayer_cross(x, lambda x: self.cross_attn(x, h, h, cross_mask))
+            x = self.sublayer_ff(x, self.feed_forward)
+        else:
+            if h is not None:
+                x = self.sublayer_cross_v(x, lambda x: self.cross_attn_v(x, h, h, cross_mask))
+            x = self.sublayer_ff_v(x, self.feed_forward_v)
+        return x
+
+
+class MultimodalDecoder(nn.Module):
+    def __init__(self, embed_dim, num_layer, num_heads, ff_dim, dropout):
+        super(MultimodalDecoder, self).__init__()
+        # decoder layer
+        self.layers = nn.ModuleList([MultimodalDecoderLayer(embed_dim, num_heads, ff_dim, dropout)
+                                        for _ in range(num_layer)])
+        self.norm = LayerNorm(embed_dim)
+        # mask token
+        self.mask_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        torch.nn.init.normal_(self.mask_token, std=.02)
+
+    def forward_mim(self, hv, ht=None, cross_mask=None, ids_restore=None, pos_embed=None):
+        """ Masked Image Modeling """
+        # embed tokens
+        # hv = self.decoder_embed(hv)
+
+        # append mask tokens to sequence
+        cls_token = hv[:, :1, :]
+        mask_tokens = self.mask_token.repeat(hv.shape[0], ids_restore.shape[1] + 1 - hv.shape[1], 1)
+        hv = torch.cat([hv[:, 1:, :], mask_tokens], dim=1)  # no cls token
+        hv = torch.gather(hv, dim=1, index=ids_restore.unsqueeze(-1).repeat(1, 1, hv.shape[2]))  # unshuffle
+        hv = torch.cat([cls_token, hv], dim=1)  # append cls token
+
+        # add pos embed
+        hv = hv + pos_embed
+
+        # apply Transformer blocks
+        for layer in self.layers:
+            hv = layer(hv, ht, None, cross_mask, mode='mim')
+
+        hv = self.norm(hv)
+        return hv
+
+    def forward_plm(self, ht, hv=None, self_mask=None, cross_mask=None):
+        """ Prefix Language Modeling """
+        # if hv is not None:
+        #     hv = self.decoder_proj(hv)
+        for i in range(len(self.layers)):
+            ht = self.layers[i](ht, hv, self_mask, cross_mask, mode='plm')
+        ht = self.norm(ht)
+        return ht
 
 
 def get_hv_mask(hv):

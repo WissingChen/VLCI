@@ -1,25 +1,24 @@
 {
     "data": {
-        "dataset_name": "iu_xray",
-        "image_dir": "../../MRG/data/iu_xray/images",
-        "ann_path": "../../MRG/data/iu_xray/annotation.json",
+        "dataset_name": "mix",
+        "image_dir": "",
+        "ann_path": "",
         "tokenizer": "mix",
-        "max_seq_length": 60,
-        "threshold": 3,
+        "max_seq_length": 100,
+        "threshold": 10,
         "num_workers": 2,
-        "batch_size": 16
+        "batch_size": 64
     },
     "model": {
-        "model": "vlci",
+        "model": "vlp",
         "embed_dim": 512,
-        "v_causal": "y",
-        "l_causal": "y",
-        "causal_proj": false,
+        "v_causal": "n",
+        "l_causal": "n",
         "num_heads": 8,
-        "V_mask_ratio": 0.85,
+        "v_mask_ratio": 0.85,
         "en_num_layers": 3,
         "de_num_layers": 3,
-        "dropout": 0.1,
+        "dropout": 0.0,
         "logit_layers": 1,
         "bos_idx": 0,
         "eos_idx": 0,
@@ -41,9 +40,9 @@
         "block_trigrams": 1
     },
     "trainer": {
-        "epochs": 10,
-        "result_dir": "results/iu_xray/vlci",
-        "record_dir": "results/iu_xray/vlci",
+        "epochs": 30,
+        "result_dir": "results/pretrain",
+        "record_dir": "records/pretrain",
         "save_period": 1,
         "monitor_mode": "max",
         "monitor_metric": "BLEU_4",
@@ -54,22 +53,22 @@
         "monitor_image": false
     },
     "optim": {
-        "loss_fn": "lm",
-        "optim": "Adam",
-        "lr_en": 1e-5,
-        "lr_de": 1e-5,
-        "weight_decay": 5e-5,
+        "loss_fn": "recon",
+        "optim": "AdamW",
+        "lr_en": 5e-4,
+        "lr_de": 5e-4,
+        "weight_decay": 1e-2,
         "amsgrad": true,
-        "lr_scheduler": "StepLR",
-        "step_size": 50,
-        "gamma": 0.1
+        "lr_scheduler": "warmup",
+        "step_size": 3,
+        "gamma": 0.8
     },
     "other": {
-        "task_name": "funtune_vlci_iuxray",
-        "seed": -1,
-        "cuda": 0,
-        "task": "inference",
-        "load_model_path": "results_iu_xray_model_best.pth",
+        "task_name": "pretrain",
+        "seed": 42,
+        "cuda": 3,
+        "task": "pretrain",
+        "load_model_path": "",
         "resume": ""
     }
 }

@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from utils.dataset import IuxrayMultiImageDataset, MimiccxrSingleImageDataset, FFAIRDataset
+from utils.dataset import IuxrayMultiImageDataset, MimiccxrSingleImageDataset, MixSingleImageDataset
 
 
 class R2DataLoader(DataLoader):
@@ -38,8 +38,8 @@ class R2DataLoader(DataLoader):
             self.dataset = IuxrayMultiImageDataset(self.args, self.tokenizer, self.split, transform=self.transform)
         elif self.dataset_name == 'mimic_cxr':
             self.dataset = MimiccxrSingleImageDataset(self.args, self.tokenizer, self.split, transform=self.transform)
-        elif self.dataset_name == 'ffa_ir':
-            self.dataset = FFAIRDataset(self.args, self.tokenizer, self.split, transform=self.transform)
+        elif self.dataset_name == 'mix':
+            self.dataset = MixSingleImageDataset(self.args, self.tokenizer, self.split, transform=self.transform)
         else:
             raise ValueError
 

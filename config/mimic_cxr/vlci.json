@@ -1,10 +1,10 @@
 {
     "data": {
         "dataset_name": "mimic_cxr",
-        "image_dir": "E:\\project\\Other\\Mine\\Radiology Report Generation/data/mimic_cxr/images",
-        "ann_path": "E:\\project\\Other\\Mine\\Radiology Report Generation\\data/mimic_cxr/annotation.json",
+        "image_dir": "../../MRG/data/mimic_cxr/images",
+        "ann_path": "../../MRG/data/mimic_cxr/annotation.json",
         "tokenizer": "mix",
-        "max_seq_length": 100,
+        "max_seq_length": 80,
         "threshold": 10,
         "num_workers": 2,
         "batch_size": 16
@@ -17,8 +17,8 @@
         "causal_proj": false,
         "num_heads": 8,
         "V_mask_ratio": 0.85,
-        "en_num_layers": 3,
-        "de_num_layers": 3,
+        "en_num_layers": 6,
+        "de_num_layers": 6,
         "dropout": 0.1,
         "logit_layers": 1,
         "bos_idx": 0,
@@ -68,7 +68,7 @@
         "task_name": "funtune_vlci_mimic_cxr",
         "seed": -1,
         "cuda": 0,
-        "task": "finetune",
+        "task": "inference",
         "load_model_path": "results/mimic_cxr_model_best.pth",
         "resume": ""
     }
