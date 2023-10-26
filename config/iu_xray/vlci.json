@@ -69,7 +69,7 @@
         "seed": -1,
         "cuda": 0,
         "task": "inference",
-        "load_model_path": "results_iu_xray_model_best.pth",
+        "load_model_path": "results/iu_xray/vlci/model_best.pth",
         "resume": ""
     }
 }

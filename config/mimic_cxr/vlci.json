@@ -69,7 +69,7 @@
         "seed": -1,
         "cuda": 0,
         "task": "inference",
-        "load_model_path": "results/mimic_cxr_model_best.pth",
+        "load_model_path": "results/mimic_cxr/vlci/model_best.pth",
         "resume": ""
     }
 }

@@ -42,7 +42,7 @@ def main():
     # load hyper-param
     # -------------------------------
     parse = argparse.ArgumentParser()
-    parse.add_argument('--c', type=str, default='config/mimic_cxr/vlci.json',
+    parse.add_argument('--c', type=str, default='config/iu_xray/vlci.json',
                        help='json file of config')
     json_path = parse.parse_args()
     args = load_json_args(json_path.c)

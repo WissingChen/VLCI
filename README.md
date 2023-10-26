@@ -22,7 +22,7 @@ conda activate mrg
 1. Datasets: 
 You can download the dataset via `data/datadownloader.py`, or download from the repo of [R2Gen](https://github.com/cuhksz-nlp/R2Gen).
 Then, unzip the files into `data/iu_xray` and `data/mimic_cxr`, respectively. 
-2. Models: We provide the well-trained models of VLCI for inference, and you can download from [here](https://pan.baidu.com/s/1qlWmUfUXsvHyPaqaOtJ-fQ?pwd=m5aq).
+2. Models: We provide the well-trained models of VLCI for inference, and you can download from [here](https://pan.baidu.com/s/1LKp_XLUVttAkgCHwm6QHpg?pwd=vsg1).
 3. Please remember to change the path of data and models in the config file (`config/*.json`).
 
 ## Evaluation
